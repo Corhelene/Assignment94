@@ -1,0 +1,114 @@
+---
+title: "Presentation"
+subtitle: "Assignment: Developing Data Products" 
+author: "Ellen Bayens"
+date: "15-12-2019"
+output: ioslides_presentation
+widescreen: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{css, echo = FALSE}
+.remark-slide-content {
+  font-size: 28px;
+  padding: 20px 80px 20px 80px;
+}
+.remark-code, .remark-inline-code {
+  background: #f0f0f0;
+}
+.remark-code {
+  font-size: 24px;
+}
+.huge .remark-code { /*Change made here*/
+  font-size: 200% !important;
+}
+.tiny .remark-code { /*Change made here*/
+  font-size: 50% !important;
+}
+```
+
+
+## Explanation on the shiny app 
+
+I made an shiny app with an overview of dutch universities and its number of students. You can find the app here: 
+
+* <https://corhelene.shinyapps.io/Assignment94/>.
+
+This app shows you the number of students on Dutch universities.
+With the checkboxes you can choose whether you want to see only the fulltime students, or also the parttime students.
+
+Here is the link to the code in github: 
+
+* [ui.R](https://github.com/Corhelene/Assignment94/blob/master/Assignment94/ui.R)
+* [server.R](https://github.com/Corhelene/Assignment94/blob/master/Assignment94/server.R)
+
+
+
+## The code used for the shiny app {.smaller}
+
+```{r message = FALSE, echo = TRUE}
+library(readxl); library(dplyr); library(plotly)
+# Loading the data
+fileURL <- "https://www.duo.nl/open_onderwijsdata/images/02-ingeschrevenen-wo-naar-opleidingsvorm-2018.xlsx"
+download.file(fileURL,destfile = "data.xlsx",mode = "wb")
+mydata <- read_excel("data.xlsx")
+names(mydata) <- gsub(" ", "_", names(mydata))
+
+#Prepare data for plot numbers of students per city
+mydata1 <- mydata %>%
+    filter(!is.na(BEVOEGD_GEZAG_NUMMER)) %>%
+    group_by(PLAATSNAAM) %>%
+    summarize(voltijd = sum(VOLTIJD_ONDERWIJS),deeltijd = sum(DEELTIJD_ONDERWIJS), count = n()) %>%
+    mutate(combined = voltijd + deeltijd) %>%
+    arrange(desc(voltijd))
+mydata1$PLAATSNAAM <- factor(mydata1$PLAATSNAAM, levels = c(as.character(mydata1$PLAATSNAAM)))
+
+#Make the plots for number of studens per city
+p_vol_deel <- plot_ly(x=mydata1$PLAATSNAAM, y=mydata1$voltijd, type = "bar", name = "Fulltime + Parttime") %>%
+    add_trace(y = mydata1$deeltijd, name = "Parttime") %>%
+         layout(annotations = list(x = 0.2 , y = 1.05, text = "Number of students (fulltime/parttime) per city", 
+                                   showarrow = F, xref='paper', yref='paper'), showlegend = FALSE)
+p_vol <- plot_ly(x=mydata1$PLAATSNAAM, y=mydata1$voltijd, type = "bar", name = "Fulltime") %>%
+    layout(title = "Number of fulltime students per city", yaxis = list(title = 'Amount'), 
+          xaxis = list(title = "City"), barmode = 'stack')       
+```
+
+
+## The code used for the shiny app (2nd part) {.smaller}
+
+```{r message = FALSE, echo = TRUE}
+#Prepare data for number of students per specialization
+mydata3 <- mydata %>%
+    filter(!is.na(BEVOEGD_GEZAG_NUMMER)) %>%
+    group_by(CROHO_ONDERDEEL) %>%
+    summarize(voltijd = sum(VOLTIJD_ONDERWIJS),deeltijd = sum(DEELTIJD_ONDERWIJS), count = n()) %>%
+    mutate(combined = voltijd + deeltijd) %>%
+    arrange(desc(voltijd))
+mydata3$CROHO_ONDERDEEL <- factor(mydata3$CROHO_ONDERDEEL, levels = c(as.character(mydata3$CROHO_ONDERDEEL)))
+
+#Make the plots for number of students per specialization
+p2_vol_deel <- plot_ly(x=mydata3$CROHO_ONDERDEEL, y=mydata3$voltijd, type = "bar", name = "Fulltime + Parttime") %>%
+    add_trace(y = mydata3$deeltijd, name = "Parttime") %>%
+    layout(annotations = list(x = 1 , y = 1.05, text = "Number of students (fulltime/parttime) per specialization", showarrow = F, xref='paper', yref='paper'),showlegend = TRUE, barmode = 'stack')
+p2_vol <- plot_ly(x=mydata3$CROHO_ONDERDEEL, y=mydata3$voltijd, type = "bar", name = "Voltijd") %>%
+    layout(title = "Number of fulltime students per specialization", 
+           yaxis = list(title = "Amount"), 
+           xaxis = list(title = "City"), 
+           barmode = 'stack')
+
+
+
+```
+## Results
+
+
+```{r, fig.width=10, echo = TRUE}
+subplot(p_vol_deel, p2_vol_deel)
+```
+
+
+
